@@ -1,10 +1,17 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { nanoid } from "nanoid"
 
-export const todos = pgTable("todos", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id").notNull(),
-  title: text("title").notNull(),
-  completed: boolean("completed").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-})
+export const bots = pgTable(
+  "bots",
+  {
+    id: text("id").primaryKey().$defaultFn(() => nanoid()),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    avatar: text("avatar").notNull().$defaultFn(() => nanoid()),
+    job: text("job").notNull(),
+    instructions: text("instructions"),
+    sandboxId: text("sandbox_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (bot) => [index("bots_user_id_idx").on(bot.userId)],
+)

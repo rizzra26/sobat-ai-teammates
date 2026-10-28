@@ -9,13 +9,19 @@ const gazeStyle = new Style(gaze)
 type ChatAvatarProps = {
   seed: string
   animated?: boolean
+  size?: number
   className?: string
 }
 
-export function ChatAvatar({ seed, animated = false, className }: ChatAvatarProps) {
+export function ChatAvatar({
+  seed,
+  animated = false,
+  size = 32,
+  className,
+}: ChatAvatarProps) {
   const src = new Avatar(gazeStyle, {
     seed,
-    size: 32,
+    size,
     animationVariant: animated ? "medium" : "none",
   }).toDataUri()
 
@@ -23,8 +29,8 @@ export function ChatAvatar({ seed, animated = false, className }: ChatAvatarProp
     <Image
       src={src}
       alt=""
-      width={32}
-      height={32}
+      width={size}
+      height={size}
       className={cn("shrink-0 rounded-full", className)}
     />
   )

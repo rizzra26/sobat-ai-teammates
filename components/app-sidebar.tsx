@@ -37,7 +37,9 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
   sidebarMenuButtonVariants,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import type { ChatSummary } from "@/queries/bots"
 import { cn } from "cn"
@@ -50,25 +52,34 @@ function timeAgo(date: Date) {
   )
 }
 
-const userButtonAppearance = {
-  elements: {
-    rootBox: "w-full!",
-    userButtonBox:
-      "flex w-full! items-center justify-start! gap-2 group-data-[collapsible=icon]:justify-center!",
-    userButtonTrigger: cn(
-      sidebarMenuButtonVariants({ size: "lg" }),
-      "h-12! w-full! justify-start! gap-2! p-2! text-sidebar-foreground! hover:bg-sidebar-accent! hover:text-sidebar-accent-foreground! active:bg-sidebar-accent! active:text-sidebar-accent-foreground! focus-visible:ring-2! focus-visible:ring-sidebar-ring!"
-    ),
-    userButtonAvatarBox: "order-first size-6!",
-    userButtonOuterIdentifier:
-      "min-w-0 truncate ps-0! text-sm! font-medium group-data-[collapsible=icon]:hidden",
-  },
+function userButtonAppearance(collapsed: boolean) {
+  return {
+    elements: {
+      rootBox: "w-full!",
+      userButtonBox: cn(
+        "flex w-full! items-center",
+        collapsed ? "justify-center! gap-0!" : "justify-start! gap-2"
+      ),
+      userButtonTrigger: cn(
+        sidebarMenuButtonVariants({ size: collapsed ? "default" : "lg" }),
+        collapsed
+          ? "justify-center! overflow-visible! text-sidebar-foreground! group-data-[collapsible=icon]:p-0! hover:bg-sidebar-accent! hover:text-sidebar-accent-foreground! active:bg-sidebar-accent! focus-visible:ring-2! focus-visible:ring-sidebar-ring!"
+          : "h-12! w-full! justify-start! gap-2! p-2! text-sidebar-foreground! hover:bg-sidebar-accent! hover:text-sidebar-accent-foreground! active:bg-sidebar-accent! active:text-sidebar-accent-foreground! focus-visible:ring-2! focus-visible:ring-sidebar-ring!"
+      ),
+      userButtonAvatarBox: "order-first size-6!",
+      userButtonOuterIdentifier:
+        "min-w-0 truncate ps-0! text-sm! font-medium group-data-[collapsible=icon]:hidden",
+    },
+  }
 }
 
 export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
   const [botOpen, setBotOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const router = useRouter()
+  const { state, isMobile } = useSidebar()
+  const collapsed = state === "collapsed" && !isMobile
+  const openChat = (chatId: string) => router.push(`/chats/${chatId}`)
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -83,9 +94,9 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
   }, [])
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex justify-end">
+        <div className={cn("flex", collapsed ? "justify-center" : "justify-end")}>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -111,15 +122,27 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => setSearchOpen(true)}
-          className="h-8 w-full min-w-0 justify-start gap-2 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base font-normal text-muted-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-        >
-          <SearchIcon className="opacity-50" />
-          Search
-          <Kbd className="ml-auto">⌘K</Kbd>
-        </Button>
+        {collapsed ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Search"
+            onClick={() => setSearchOpen(true)}
+            className="border border-input dark:bg-input/30"
+          >
+            <SearchIcon className="opacity-50" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            onClick={() => setSearchOpen(true)}
+            className="h-8 w-full min-w-0 justify-start gap-2 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base font-normal text-muted-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+          >
+            <SearchIcon className="opacity-50" />
+            Search
+            <Kbd className="ml-auto">⌘K</Kbd>
+          </Button>
+        )}
         <BotDialog open={botOpen} onOpenChange={setBotOpen} trigger={null} />
         <CommandDialog
           open={searchOpen}
@@ -167,23 +190,32 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
               {chats.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
                   <SidebarMenuButton
-                    size="lg"
-                    className="h-auto min-h-12 pr-16"
-                    onClick={() => router.push(`/chats/${chat.id}`)}
+                    size={collapsed ? "default" : "lg"}
+                    className={cn(
+                      collapsed
+                        ? "group-data-[collapsible=icon]:p-1!"
+                        : "h-auto min-h-12 pr-16"
+                    )}
+                    tooltip={collapsed ? chat.name : undefined}
+                    onClick={() => openChat(chat.id)}
                   >
-                    <ChatAvatar seed={chat.avatar} className="size-8" />
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
-                      <span className="truncate font-medium">{chat.name}</span>
-                      {chat.preview && (
-                        <span className="truncate text-xs text-muted-foreground">
-                          {chat.preview}
-                        </span>
-                      )}
-                    </span>
+                    <ChatAvatar seed={chat.avatar} size={collapsed ? 24 : 32} />
+                    {!collapsed && (
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
+                        <span className="truncate font-medium">{chat.name}</span>
+                        {chat.preview && (
+                          <span className="truncate text-xs text-muted-foreground">
+                            {chat.preview}
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </SidebarMenuButton>
-                  <SidebarMenuBadge suppressHydrationWarning>
-                    {timeAgo(chat.lastMessageAt)}
-                  </SidebarMenuBadge>
+                  {!collapsed && (
+                    <SidebarMenuBadge suppressHydrationWarning>
+                      {timeAgo(chat.lastMessageAt)}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -193,10 +225,14 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <UserButton showName appearance={userButtonAppearance} />
+            <UserButton
+              showName={!collapsed}
+              appearance={userButtonAppearance(collapsed)}
+            />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

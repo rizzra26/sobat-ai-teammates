@@ -1,3 +1,5 @@
+import { cookies } from "next/headers"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -11,10 +13,11 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const chats = await listChats()
+  const [chats, cookieStore] = await Promise.all([listChats(), cookies()])
+  const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false"
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar chats={chats} />
       <SidebarInset>
         <header className="flex h-14 items-center gap-2 border-b px-4">

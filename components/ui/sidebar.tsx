@@ -716,6 +716,7 @@ export {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
+  sidebarMenuButtonVariants,
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,

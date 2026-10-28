@@ -32,6 +32,6 @@ export async function createBot(input: BotInput) {
     return [bot]
   })
 
-  revalidatePath("/")
+  revalidatePath("/", "layout")
   return bot
 }

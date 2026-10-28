@@ -1,7 +1,6 @@
-import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,20 +30,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ClerkProvider appearance={{ theme: shadcn }}>
           <TooltipProvider>
-            <header className="flex items-center justify-between border-b px-6 py-3">
-              <span className="font-semibold">Sobat</span>
-              <Suspense>
-                <Show when="signed-out">
-                  <div className="flex items-center gap-2">
-                    <SignInButton />
-                    <SignUpButton />
-                  </div>
-                </Show>
-                <Show when="signed-in">
-                  <UserButton />
-                </Show>
-              </Suspense>
-            </header>
             {children}
             <Toaster />
           </TooltipProvider>

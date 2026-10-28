@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { PlusIcon, ShuffleIcon } from "lucide-react"
 import { nanoid } from "nanoid"
-import { useState } from "react"
+import { useState, type ReactElement } from "react"
 import { Controller, useForm } from "react-hook-form"
 
 import { createBot } from "@/actions/bot"
@@ -57,19 +57,27 @@ const SUGGESTIONS = [
   },
 ]
 
-export function BotDialog() {
-  const [open, setOpen] = useState(false)
+export function BotDialog({
+  open: openProp,
+  onOpenChange,
+  trigger = (
+    <Button variant="secondary">
+      <PlusIcon data-icon="inline-start" />
+      Create a new bot
+    </Button>
+  ),
+}: {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  trigger?: ReactElement | null
+}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button variant="secondary">
-            <PlusIcon data-icon="inline-start" />
-            Create a new bot
-          </Button>
-        }
-      />
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
         <BotForm onCreated={() => setOpen(false)} />
       </DialogContent>

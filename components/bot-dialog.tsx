@@ -1,13 +1,25 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { PlusIcon, ShuffleIcon } from "lucide-react"
+import { PlusIcon, ShuffleIcon, TrashIcon } from "lucide-react"
 import { nanoid } from "nanoid"
+import { useRouter } from "next/navigation"
 import { useState, type ReactElement } from "react"
 import { Controller, useForm } from "react-hook-form"
 
-import { createBot } from "@/actions/bot"
+import { createBot, deleteBot, updateBot } from "@/actions/bot"
 import { ChatAvatar } from "@/components/chat-avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -57,9 +69,18 @@ const SUGGESTIONS = [
   },
 ]
 
+type BotDefaults = {
+  id: string
+  name: string
+  avatar: string
+  job: string
+  instructions: string | null
+}
+
 export function BotDialog({
   open: openProp,
   onOpenChange,
+  bot,
   trigger = (
     <Button variant="secondary">
       <PlusIcon data-icon="inline-start" />
@@ -69,6 +90,7 @@ export function BotDialog({
 }: {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  bot?: BotDefaults
   trigger?: ReactElement | null
 }) {
   const [internalOpen, setInternalOpen] = useState(false)
@@ -79,41 +101,89 @@ export function BotDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-        <BotForm onCreated={() => setOpen(false)} />
+        <BotForm bot={bot} onCreated={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   )
 }
 
-function BotForm({ onCreated }: { onCreated: () => void }) {
+function BotForm({
+  bot,
+  onCreated,
+}: {
+  bot?: BotDefaults
+  onCreated: () => void
+}) {
   const [initialSeed] = useState(() => nanoid())
+  const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouter()
 
   const form = useForm<BotInput>({
     resolver: zodResolver(botInsertSchema),
-    defaultValues: {
-      name: "",
-      job: "",
-      instructions: "",
-      avatar: initialSeed,
-    },
+    defaultValues: bot
+      ? {
+          name: bot.name,
+          job: bot.job,
+          instructions: bot.instructions ?? "",
+          avatar: bot.avatar,
+        }
+      : {
+          name: "",
+          job: "",
+          instructions: "",
+          avatar: initialSeed,
+        },
   })
 
   async function onSubmit(values: BotInput) {
     try {
-      await createBot(values)
-      toast.add({
-        title: "Bot created",
-        description: `${values.name} is ready to go.`,
-        type: "success",
-      })
+      if (bot) {
+        await updateBot(bot.id, values)
+        toast.add({
+          title: "Bot updated",
+          description: `${values.name} has been saved.`,
+          type: "success",
+        })
+      } else {
+        await createBot(values)
+        toast.add({
+          title: "Bot created",
+          description: `${values.name} is ready to go.`,
+          type: "success",
+        })
+      }
       onCreated()
     } catch (error) {
       toast.add({
-        title: "Could not create bot",
+        title: bot ? "Could not update bot" : "Could not create bot",
         description:
           error instanceof Error ? error.message : "Something went wrong.",
         type: "error",
       })
+    }
+  }
+
+  async function onDelete() {
+    if (!bot) return
+    setIsDeleting(true)
+    try {
+      await deleteBot(bot.id)
+      toast.add({
+        title: "Bot deleted",
+        description: `${bot.name} is gone.`,
+        type: "success",
+      })
+      onCreated()
+      router.push("/")
+    } catch (error) {
+      toast.add({
+        title: "Could not delete bot",
+        description:
+          error instanceof Error ? error.message : "Something went wrong.",
+        type: "error",
+      })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -123,9 +193,11 @@ function BotForm({ onCreated }: { onCreated: () => void }) {
       className="flex flex-col gap-4"
     >
       <DialogHeader>
-        <DialogTitle>New bot</DialogTitle>
+        <DialogTitle>{bot ? "Edit bot" : "New bot"}</DialogTitle>
         <DialogDescription>
-          Give it a face, a name, and a job to do.
+          {bot
+            ? "Change its face, name, or job."
+            : "Give it a face, a name, and a job to do."}
         </DialogDescription>
       </DialogHeader>
 
@@ -228,14 +300,57 @@ function BotForm({ onCreated }: { onCreated: () => void }) {
         />
       </FieldGroup>
 
-      <DialogFooter>
-        <DialogClose render={<Button type="button" variant="outline" />}>
-          Cancel
-        </DialogClose>
-        <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting && <Spinner data-icon="inline-start" />}
-          Create bot
-        </Button>
+      <DialogFooter className={bot ? "sm:justify-between" : undefined}>
+        {bot && (
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isDeleting || form.formState.isSubmitting}
+                />
+              }
+            >
+              <TrashIcon data-icon="inline-start" />
+              Delete
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {bot.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This deletes the bot and its chats. It cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  type="button"
+                  variant="destructive"
+                  disabled={isDeleting}
+                  onClick={onDelete}
+                >
+                  {isDeleting && <Spinner data-icon="inline-start" />}
+                  Delete bot
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <DialogClose render={<Button type="button" variant="outline" />}>
+            Cancel
+          </DialogClose>
+          <Button
+            type="submit"
+            disabled={form.formState.isSubmitting || isDeleting}
+          >
+            {form.formState.isSubmitting && (
+              <Spinner data-icon="inline-start" />
+            )}
+            {bot ? "Save changes" : "Create bot"}
+          </Button>
+        </div>
       </DialogFooter>
     </form>
   )

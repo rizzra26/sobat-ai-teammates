@@ -3,11 +3,12 @@
 import { UserButton } from "@clerk/nextjs"
 import { differenceInSeconds, formatDistanceToNowStrict } from "date-fns"
 import { PlusIcon, SearchIcon, UsersIcon } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import { BotDialog } from "@/components/bot-dialog"
 import { ChatAvatar } from "@/components/chat-avatar"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -77,6 +78,7 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
   const [botOpen, setBotOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
   const { state, isMobile } = useSidebar()
   const collapsed = state === "collapsed" && !isMobile
   const openChat = (chatId: string) => router.push(`/chats/${chatId}`)
@@ -186,7 +188,7 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {chats.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
                   <SidebarMenuButton
@@ -197,6 +199,7 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
                         : "h-auto min-h-12 pr-16"
                     )}
                     tooltip={collapsed ? chat.name : undefined}
+                    isActive={pathname === `/chats/${chat.id}`}
                     onClick={() => openChat(chat.id)}
                   >
                     <ChatAvatar seed={chat.avatar} size={collapsed ? 24 : 32} />
@@ -223,6 +226,7 @@ export function AppSidebar({ chats }: { chats: ChatSummary[] }) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <ThemeToggle className={cn(collapsed && "self-center")} />
         <SidebarMenu>
           <SidebarMenuItem>
             <UserButton
